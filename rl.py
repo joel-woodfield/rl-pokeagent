@@ -21,6 +21,11 @@ def parse_args():
         action="store_true",
         help="Use pygame window for rendering",
     )
+    parser.add_argument(
+        "--dev",
+        action="store_true",
+        help="Use development server with no anti-cheat (faster for training)",
+    )
     return parser.parse_args()
     
 
@@ -31,7 +36,7 @@ def main():
 
     episode = 0
     obs, info = env.reset()
-    for i in range(100):
+    for i in range(1000):
         print(f"Step {i}")
         action = env.action_space.sample()
         obs, reward, terminated, truncated, info = env.step(action)

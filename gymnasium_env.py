@@ -26,7 +26,12 @@ ACTION_INT_TO_STR = {
 
 def start_server(args):
     python_exe = sys.executable
-    server_cmd = [python_exe, "-m", "server.app", "--port", str(args.port)]
+    if args.dev:
+        server_file = "server.app-dev"
+    else:
+        server_file = "server.app"
+
+    server_cmd = [python_exe, "-m", server_file, "--port", str(args.port)]
 
     if args.record:
         server_cmd.append("--record")
@@ -65,8 +70,6 @@ def base64_to_numpy(b64_string: str) -> np.ndarray:
 
 
 class PokeEnv(gym.Env):
-    PER_STEP_SLEEP = 1
-
     def __init__(self, args):
         super().__init__()
         self.args = args
@@ -78,6 +81,11 @@ class PokeEnv(gym.Env):
         self._pygame_screen = None
 
         self.action_space = gym.spaces.Discrete(len(ACTION_INT_TO_STR))
+
+        if args.dev:
+            self.per_step_sleep = 0.05
+        else:
+            self.per_step_sleep = 0.1
 
     def reset(self) -> tuple[dict, dict]:
         self.close()
@@ -115,7 +123,7 @@ class PokeEnv(gym.Env):
         except requests.RequestException as e:
             raise RuntimeError(f"Request failed: {e}") from e
 
-        time.sleep(self.PER_STEP_SLEEP)       
+        time.sleep(self.per_step_sleep)       
 
         next_state = self._get_state()
         next_obs = self._get_obs(next_state)
