@@ -7,6 +7,7 @@ import subprocess
 import sys
 import time
 
+import cv2
 import gymnasium as gym
 import numpy as np
 from PIL import Image
@@ -15,23 +16,23 @@ from PIL import Image
 ACTION_INT_TO_STR = {
     0: "A",
     1: "B",
-    2: "SELECT",
-    3: "START",
-    4: "UP",
-    5: "DOWN",
-    6: "LEFT",
-    7: "RIGHT",
+    2: "UP",
+    3: "DOWN",
+    4: "LEFT",
+    5: "RIGHT",
+    # 6: "SELECT",
+    # 7: "START",
 }
 
 
-def start_server(args):
+def start_server(args, port):
     python_exe = sys.executable
     if args.dev:
         server_file = "server.app-dev"
     else:
         server_file = "server.app"
 
-    server_cmd = [python_exe, "-m", server_file, "--port", str(args.port)]
+    server_cmd = [python_exe, "-m", server_file, "--port", str(port)]
 
     if args.record:
         server_cmd.append("--record")
@@ -70,10 +71,11 @@ def base64_to_numpy(b64_string: str) -> np.ndarray:
 
 
 class PokeEnv(gym.Env):
-    def __init__(self, args):
+    def __init__(self, args, seed):
         super().__init__()
         self.args = args
-        self._server_url = f"http://localhost:{args.port}"
+        self._port = args.port + 3 * seed
+        self._server_url = f"http://localhost:{self._port}"
         self._server = None
 
         self._pygame = args.pygame
@@ -81,15 +83,33 @@ class PokeEnv(gym.Env):
         self._pygame_screen = None
 
         self.action_space = gym.spaces.Discrete(len(ACTION_INT_TO_STR))
+        self.observation_space = gym.spaces.Dict({
+            "image": gym.spaces.Box(
+                low=0,
+                high=255,
+                shape=(84, 84),
+                dtype=np.uint8,
+            ),
+            "position": gym.spaces.Box(
+                low=np.array([-np.inf, -np.inf], dtype=np.float32),
+                high=np.array([np.inf, np.inf], dtype=np.float32),
+                shape=(2,),
+                dtype=np.float32,
+            ),
+        })
 
         if args.dev:
             self.per_step_sleep = 0.05
         else:
             self.per_step_sleep = 0.1
 
-    def reset(self) -> tuple[dict, dict]:
+        self._seen_coords = set()
+        self.time_limit = args.timelimit
+        self._steps = 0
+
+    def reset(self, seed=None) -> tuple[dict, dict]:
         self.close()
-        self._server = start_server(self.args)
+        self._server = start_server(self.args, self._port)
         if self._server is None:
             raise RuntimeError("Failed to restart server")
 
@@ -105,6 +125,9 @@ class PokeEnv(gym.Env):
 
         if self._pygame:
             self._update_pygame_window(obs["image"])
+
+        self._seen_coords.clear()
+        self._seen_coords.add((obs["position"][0], obs["position"][1]))
 
         return obs, info
 
@@ -126,14 +149,26 @@ class PokeEnv(gym.Env):
         time.sleep(self.per_step_sleep)       
 
         next_state = self._get_state()
+
         next_obs = self._get_obs(next_state)
-        reward = 0.0
+
+        if (next_obs["position"][0], next_obs["position"][1]) not in self._seen_coords:
+            reward = 1
+            self._seen_coords.add((next_obs["position"][0], next_obs["position"][1]))
+        else:
+            reward = 0
+
+        if self._steps >= self.time_limit:
+            truncated = True
+        else:
+            truncated = False
         terminated = False
-        truncated = False
         info = {}
 
         if self._pygame:
             self._update_pygame_window(next_obs["image"])
+
+        self._steps += 1
 
         return next_obs, reward, terminated, truncated, info
 
@@ -160,6 +195,8 @@ class PokeEnv(gym.Env):
             raise RuntimeError("No visual data in state")
         img_data = state["visual"]["screenshot_base64"]
         image = base64_to_numpy(img_data)
+        image = cv2.resize(image, (84, 84))
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         obs["image"] = image
 
         if "player" not in state or "position" not in state["player"]:

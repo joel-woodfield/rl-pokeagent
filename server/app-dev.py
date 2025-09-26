@@ -47,7 +47,7 @@ step_count = 0
 agent_step_count = 0  # Track agent steps separately from frame steps
 current_obs = None
 # fps = 80
-fps = 800
+fps = 320
 no_anticheat = True  # Disable anti-cheat to make it faster for training
 
 # Performance monitoring
