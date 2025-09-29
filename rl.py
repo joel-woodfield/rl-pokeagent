@@ -39,7 +39,7 @@ def parse_args():
     parser.add_argument(
         "--timelimit",
         type=int,
-        default=100_000,
+        default=2_000,
         help="Number of steps per episode (default: 100,000)",
     )
     return parser.parse_args()
@@ -72,6 +72,7 @@ def ppo():
 
 def main():
     ppo()
+
 
 if __name__ == "__main__":
     main()

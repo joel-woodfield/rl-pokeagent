@@ -32,7 +32,7 @@ def start_server(args, port):
     else:
         server_file = "server.app"
 
-    server_cmd = [python_exe, "-m", server_file, "--port", str(port)]
+    server_cmd = [python_exe, "-m", server_file, "--port", str(port), "--no-ocr"]
 
     if args.record:
         server_cmd.append("--record")
@@ -103,11 +103,20 @@ class PokeEnv(gym.Env):
         else:
             self.per_step_sleep = 0.1
 
-        self._seen_coords = set()
+        self._seen_locations = set()
+        self._seen_dialog = set()
+
         self.time_limit = args.timelimit
         self._steps = 0
 
+        self._total_reward = 0
+
     def reset(self, seed=None) -> tuple[dict, dict]:
+        self._steps = 0
+        self._total_reward = 0
+        self._seen_dialog.clear()
+        self._seen_locations.clear()
+
         self.close()
         self._server = start_server(self.args, self._port)
         if self._server is None:
@@ -126,8 +135,7 @@ class PokeEnv(gym.Env):
         if self._pygame:
             self._update_pygame_window(obs["image"])
 
-        self._seen_coords.clear()
-        self._seen_coords.add((obs["position"][0], obs["position"][1]))
+        self._seen_locations.add(state["player"]["location"])
 
         return obs, info
 
@@ -149,14 +157,19 @@ class PokeEnv(gym.Env):
         time.sleep(self.per_step_sleep)       
 
         next_state = self._get_state()
+        reward = 0
+
+        dialog = str(next_state["game"]["dialog_text"])
+        if dialog not in self._seen_dialog:
+            reward += 1
+            self._seen_dialog.add(dialog)
 
         next_obs = self._get_obs(next_state)
 
-        if (next_obs["position"][0], next_obs["position"][1]) not in self._seen_coords:
-            reward = 1
-            self._seen_coords.add((next_obs["position"][0], next_obs["position"][1]))
-        else:
-            reward = 0
+        location = next_state["player"]["location"]
+        if location not in self._seen_locations:
+            reward += 1
+            self._seen_locations.add(location)
 
         if self._steps >= self.time_limit:
             truncated = True
@@ -169,6 +182,10 @@ class PokeEnv(gym.Env):
             self._update_pygame_window(next_obs["image"])
 
         self._steps += 1
+        self._total_reward += reward
+        if self._steps % 100 == 0:
+            with open("progress.txt", "a") as f:
+                f.write(f"{self._steps}: {self._total_reward}\n")
 
         return next_obs, reward, terminated, truncated, info
 
@@ -178,6 +195,10 @@ class PokeEnv(gym.Env):
             self._server.terminate()
             self._server.wait()
             print("Server process terminated.")
+        if self._pygame:
+            pygame.quit()
+            self._pygame_screen = None
+            print("Pygame window closed.")
 
     def _get_state(self) -> dict:
         try:
@@ -211,6 +232,8 @@ class PokeEnv(gym.Env):
     def _update_pygame_window(self, frame: np.ndarray) -> None:
         if self._pygame_screen is None:
             return
+        if frame.ndim == 2:
+            frame = np.stack([frame]*3, axis=-1)
         surface = pygame.surfarray.make_surface(frame.swapaxes(0, 1))
         surface = pygame.transform.scale(surface, self._pygame_screen.get_size())
         self._pygame_screen.blit(surface, (0, 0))
@@ -262,4 +285,3 @@ def test():
 
 if __name__ == "__main__":
     test()
-    

@@ -59,7 +59,8 @@ action_frames_remaining = 0  # Frames left to hold current action
 release_frames_remaining = 0  # Frames left to wait after release
 
 ### IMPORTANT: DO NOT REDUCE THESE OR BUTTONS MAY NOT WORK! ###
-ACTION_HOLD_FRAMES = 12   # Hold each action for 12 frames 
+# ACTION_HOLD_FRAMES = 12   # Hold each action for 12 frames 
+ACTION_HOLD_FRAMES = 36
 ACTION_RELEASE_DELAY = 24   # Delay between actions for processing
 
 # Video recording state
