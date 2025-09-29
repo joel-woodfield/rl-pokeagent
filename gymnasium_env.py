@@ -32,7 +32,10 @@ def start_server(args, port):
     else:
         server_file = "server.app"
 
-    server_cmd = [python_exe, "-m", server_file, "--port", str(port), "--no-ocr"]
+    server_cmd = [python_exe, "-m", server_file, "--port", str(port)]
+
+    if args.dev:
+        server_cmd.append("--no-ocr")
 
     if args.record:
         server_cmd.append("--record")
@@ -99,9 +102,9 @@ class PokeEnv(gym.Env):
         })
 
         if args.dev:
-            self.per_step_sleep = 0.05
+            self.per_step_sleep = 0.01
         else:
-            self.per_step_sleep = 0.1
+            self.per_step_sleep = 1
 
         self._seen_locations = set()
         self._seen_dialog = set()
@@ -183,7 +186,7 @@ class PokeEnv(gym.Env):
 
         self._steps += 1
         self._total_reward += reward
-        if self._steps % 100 == 0:
+        if self._steps % 20 == 0:
             with open("progress.txt", "a") as f:
                 f.write(f"{self._steps}: {self._total_reward}\n")
 

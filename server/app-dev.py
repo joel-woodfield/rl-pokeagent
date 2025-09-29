@@ -47,7 +47,7 @@ step_count = 0
 agent_step_count = 0  # Track agent steps separately from frame steps
 current_obs = None
 # fps = 80
-fps = 320
+fps = 3200
 no_anticheat = True  # Disable anti-cheat to make it faster for training
 
 # Performance monitoring
@@ -59,8 +59,7 @@ action_frames_remaining = 0  # Frames left to hold current action
 release_frames_remaining = 0  # Frames left to wait after release
 
 ### IMPORTANT: DO NOT REDUCE THESE OR BUTTONS MAY NOT WORK! ###
-# ACTION_HOLD_FRAMES = 12   # Hold each action for 12 frames 
-ACTION_HOLD_FRAMES = 36
+ACTION_HOLD_FRAMES = 144   # Hold each action for 12 frames 
 ACTION_RELEASE_DELAY = 24   # Delay between actions for processing
 
 # Video recording state
@@ -368,8 +367,8 @@ def step_environment(actions_pressed):
     global current_obs
     
     # Debug: print what actions are being sent to emulator
-    if actions_pressed:
-        print(f"🎯 DEBUG: Stepping emulator with actions: {actions_pressed}")
+    # if actions_pressed:
+            # print( Stepping emulator with actions: {actions_pressed}")
     
     
     # Only use memory_lock for the essential emulator step
@@ -528,7 +527,8 @@ def game_loop(manual_mode=False):
                 queue_len = len(action_queue)
                 # Get current FPS for estimation
                 current_fps_for_calc = env.get_current_fps(fps) if env else fps
-                estimated_time = queue_len * (ACTION_HOLD_FRAMES / (fps / 80) + ACTION_RELEASE_DELAY / (fps / 80)) / current_fps_for_calc
+                # estimated_time = queue_len * (ACTION_HOLD_FRAMES / (fps / 80) + ACTION_RELEASE_DELAY / (fps / 80)) / current_fps_for_calc
+                estimated_time = queue_len * (ACTION_HOLD_FRAMES + ACTION_RELEASE_DELAY) / current_fps_for_calc
                 print(f"🎮 Server processing action: {current_action}, Queue remaining: {queue_len} actions (~{estimated_time:.1f}s)")
             else:
                 # No action to process
@@ -691,11 +691,11 @@ async def take_action(request: ActionRequest):
     """Take an action"""
     global current_obs, step_count, recent_button_presses, action_queue, anticheat_tracker, step_counter, last_action_time
     
-    print(f"🔍 DEBUG: Action endpoint called with request: {request}")
-    print(f"🔍 DEBUG: Request buttons: {request.buttons}")
+            # print( Action endpoint called with request: {request}")
+            # print( Request buttons: {request.buttons}")
     
     if env is None:
-        print(f"❌ DEBUG: Emulator not initialized")
+            # print( Emulator not initialized")
         raise HTTPException(status_code=400, detail="Emulator not initialized")
     
     try:
@@ -740,7 +740,7 @@ async def take_action(request: ActionRequest):
             if len(recent_button_presses) > 50:
                 recent_button_presses = recent_button_presses[-50:]
         else:
-            print(f"⚠️ DEBUG: No buttons in request")
+            print(f" No buttons in request")
         
         # DON'T execute action here - let the game loop handle it from the queue
         # This prevents conflicts between the API thread and pygame thread
@@ -748,7 +748,7 @@ async def take_action(request: ActionRequest):
         # Return immediate success - avoid all locks to prevent deadlocks
         actions_added = len(request.buttons) if request.buttons else 0
         
-        print(f"✅ DEBUG: Returning success, actions_added: {actions_added}, queue_length: {len(action_queue)}")
+            # print( Returning success, actions_added: {actions_added}, queue_length: {len(action_queue)}")
         
         # Log action to submission.log if anticheat tracker is available
         if not no_anticheat and anticheat_tracker and request.buttons:
@@ -811,7 +811,7 @@ async def take_action(request: ActionRequest):
         }
             
     except Exception as e:
-        print(f"❌ DEBUG: Exception in action endpoint: {e}")
+            # print( Exception in action endpoint: {e}")
         logger.error(f"Error taking action: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
