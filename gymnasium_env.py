@@ -204,13 +204,16 @@ class PokeEnv(gym.Env):
             print("Pygame window closed.")
 
     def _get_state(self) -> dict:
-        try:
-            request = requests.get(f"{self._server_url}/state")
-            if request.status_code != 200:
-                raise RuntimeError(f"Failed to get observation: {request.text}")
-            return dict(request.json())
-        except requests.RequestException as e:
-            raise RuntimeError(f"Request failed: {e}") from e
+        while True:
+            try:
+                request = requests.get(f"{self._server_url}/state")
+                if request.status_code != 200:
+                    print(f"Failed to get observation: {request.text}, retrying...")
+                    continue
+                    # raise RuntimeError(f"Failed to get observation: {request.text}")
+                return dict(request.json())
+            except requests.RequestException as e:
+                raise RuntimeError(f"Request failed: {e}") from e
 
     def _get_obs(self, state: dict) -> dict:
         obs = {}
