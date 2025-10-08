@@ -113,7 +113,6 @@ class PokeEnv(gym.Env):
             self.per_step_sleep = 1
 
         self._seen_locations = set()
-        self._seen_dialog = set()
 
         self.time_limit = args.timelimit
         self._steps = 0
@@ -124,7 +123,6 @@ class PokeEnv(gym.Env):
     def reset(self, seed=None) -> tuple[dict, dict]:
         self._steps = 0
         self._total_reward = 0
-        self._seen_dialog.clear()
         self._seen_locations.clear()
 
         self.close()
@@ -186,11 +184,6 @@ class PokeEnv(gym.Env):
 
         next_state = self._get_state()
         reward = 0
-
-        dialog = str(next_state["game"]["dialog_text"])
-        if dialog not in self._seen_dialog:
-            reward += 1
-            self._seen_dialog.add(dialog)
 
         next_obs = self._get_obs(next_state)
         next_coordinate = self._get_coord(next_state)
