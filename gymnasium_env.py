@@ -1,5 +1,6 @@
 import argparse
 import base64
+from dataclasses import dataclass
 import io
 import pygame
 import requests
@@ -23,6 +24,10 @@ ACTION_INT_TO_STR = {
     # 6: "SELECT",
     # 7: "START",
 }
+
+MOVEMENT_ACTIONS = {"UP", "DOWN", "LEFT", "RIGHT"}
+
+MAX_MOVEMENT_ACTION_SENDS = 2
 
 
 def start_server(args, port):
@@ -73,6 +78,13 @@ def base64_to_numpy(b64_string: str) -> np.ndarray:
     return np.array(image)
 
 
+@dataclass
+class Coordinate:
+    x: int
+    y: int
+    loc: str
+
+
 class PokeEnv(gym.Env):
     def __init__(self, args, seed):
         super().__init__()
@@ -93,12 +105,6 @@ class PokeEnv(gym.Env):
                 shape=(84, 84),
                 dtype=np.uint8,
             ),
-            "position": gym.spaces.Box(
-                low=np.array([-np.inf, -np.inf], dtype=np.float32),
-                high=np.array([np.inf, np.inf], dtype=np.float32),
-                shape=(2,),
-                dtype=np.float32,
-            ),
         })
 
         if args.dev:
@@ -113,6 +119,7 @@ class PokeEnv(gym.Env):
         self._steps = 0
 
         self._total_reward = 0
+        self._last_seen_coord = None
 
     def reset(self, seed=None) -> tuple[dict, dict]:
         self._steps = 0
@@ -133,7 +140,9 @@ class PokeEnv(gym.Env):
 
         state = self._get_state()
         obs = self._get_obs(state)
-        info = {}
+        coordinate = self._get_coord(state)
+        info = {"coord": coordinate}
+        self._last_seen_coord = coordinate
 
         if self._pygame:
             self._update_pygame_window(obs["image"])
@@ -146,16 +155,32 @@ class PokeEnv(gym.Env):
         action = ACTION_INT_TO_STR.get(action, None)
         if action is None:
             raise ValueError(f"Invalid action: {action}")
-        try:
-            response = requests.post(
-                f"{self._server_url}/action", 
-                json={"buttons": [action]},
-                timeout=5,
-            )
-            if response.status_code != 200:
-                raise RuntimeError(f"Failed to send action: {response.text}")
-        except requests.RequestException as e:
-            raise RuntimeError(f"Request failed: {e}") from e
+
+        action_send_count = 0
+        while True:
+            try:
+                response = requests.post(
+                    f"{self._server_url}/action", 
+                    json={"buttons": [action]},
+                    timeout=5,
+                )
+                if response.status_code != 200:
+                    raise RuntimeError(f"Failed to send action: {response.text}")
+                action_send_count += 1
+            except requests.RequestException as e:
+                raise RuntimeError(f"Request failed: {e}") from e
+
+            # only one action for non-movement
+            if not action in MOVEMENT_ACTIONS:
+                break
+            
+            time.sleep(self.per_step_sleep)       
+            state = self._get_state()
+            current_coordinate = self._get_coord(state)
+            if current_coordinate != self._last_seen_coord:
+                break
+            if action_send_count >= MAX_MOVEMENT_ACTION_SENDS:
+                break
 
         time.sleep(self.per_step_sleep)       
 
@@ -168,8 +193,11 @@ class PokeEnv(gym.Env):
             self._seen_dialog.add(dialog)
 
         next_obs = self._get_obs(next_state)
+        next_coordinate = self._get_coord(next_state)
+        info = {"coord": next_coordinate}
+        self._last_seen_coord = next_coordinate
 
-        location = next_state["player"]["location"]
+        location = next_coordinate.loc
         if location not in self._seen_locations:
             reward += 1
             self._seen_locations.add(location)
@@ -179,7 +207,6 @@ class PokeEnv(gym.Env):
         else:
             truncated = False
         terminated = False
-        info = {}
 
         if self._pygame:
             self._update_pygame_window(next_obs["image"])
@@ -226,14 +253,15 @@ class PokeEnv(gym.Env):
         image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         obs["image"] = image
 
-        if "player" not in state or "position" not in state["player"]:
-            raise RuntimeError("No position data in state")
-        position = state["player"]["position"]
-        if "x" not in position or "y" not in position:
-            raise RuntimeError("Incomplete position data in state")
-        obs["position"] = np.array([position["x"], position["y"]], dtype=np.float32)
-
         return obs
+
+    def _get_coord(self, state: dict) -> Coordinate:
+        player = state.get("player", {})
+        pos = player.get("position", {})
+        x = pos.get("x", 0)
+        y = pos.get("y", 0)
+        loc = player.get("location", "unknown")
+        return Coordinate(x=x, y=y, loc=loc)
 
     def _update_pygame_window(self, frame: np.ndarray) -> None:
         if self._pygame_screen is None:

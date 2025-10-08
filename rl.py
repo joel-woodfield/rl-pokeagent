@@ -1,7 +1,7 @@
 import argparse
 
 import gymnasium as gym
-from stable_baselines3 import PPO
+from sb3_contrib import RecurrentPPO
 from stable_baselines3.common.vec_env import DummyVecEnv
 
 from gymnasium_env import PokeEnv
@@ -42,6 +42,12 @@ def parse_args():
         default=2_000,
         help="Number of steps per episode (default: 100,000)",
     )
+    parser.add_argument(
+        "--entropy-coef",
+        type=float,
+        default=0,
+        help="Entropy coefficient for PPO (default: 0)",
+    )
     return parser.parse_args()
 
 
@@ -65,7 +71,7 @@ def ppo():
     envs = DummyVecEnv(
         [lambda: PokeEnv(args, seed=i) for i in range(args.num_envs)]
     )
-    model = PPO("MultiInputPolicy", envs, verbose=1)
+    model = RecurrentPPO("MultiInputLstmPolicy", envs, verbose=1, ent_coef=args.entropy_coef)
     model.learn(total_timesteps=1_000_000)
     envs.close()
 
