@@ -1,5 +1,6 @@
 import argparse
 import pickle
+import time
 
 import gymnasium as gym
 from sb3_contrib import RecurrentPPO
@@ -50,6 +51,11 @@ def parse_args():
         default=0,
         help="Entropy coefficient for PPO (default: 0)",
     )
+    parser.add_argument(
+        "--human-timelimit",
+        type=int,
+        default=(60 * 60 * 5.9)  # 5.9 hours
+    )
     return parser.parse_args()
 
 
@@ -76,6 +82,9 @@ def graph_explorer():
     done = False
     _, info = env.reset()
     step = 0
+
+    start_time = time.time()
+
     while not done:
         before_coord = info["coord"]
         agent.add_coord_to_graph(before_coord)
@@ -96,7 +105,12 @@ def graph_explorer():
             with open(f"graph_{step}.pkl", "wb") as f:
                 pickle.dump(agent, f)
 
+        if time.time() - start_time > args.human_timelimit:
+            print("Time limit reached, ending episode.")
+            break
+
     env.close()
+    print(f"Total time: {time.time() - start_time} seconds")
 
 
 def ppo():
