@@ -1,10 +1,12 @@
 import argparse
+import pickle
 
 import gymnasium as gym
 from sb3_contrib import RecurrentPPO
 from stable_baselines3.common.vec_env import DummyVecEnv
 
-from gymnasium_env import PokeEnv
+from graph_explorer import GraphExplorer
+from gymnasium_env import ACTION_STR_TO_INT, PokeEnv
 
 
 def parse_args():
@@ -39,7 +41,7 @@ def parse_args():
     parser.add_argument(
         "--timelimit",
         type=int,
-        default=2_000,
+        default=50_000,
         help="Number of steps per episode (default: 100,000)",
     )
     parser.add_argument(
@@ -66,6 +68,37 @@ def random():
     env.close()
 
 
+def graph_explorer():
+    args = parse_args()
+    env = PokeEnv(args, seed=0)
+    agent = GraphExplorer()
+
+    done = False
+    _, info = env.reset()
+    step = 0
+    while not done:
+        before_coord = info["coord"]
+        agent.add_coord_to_graph(before_coord)
+
+        action = agent.get_action(before_coord)
+        action_number = ACTION_STR_TO_INT[action]
+        _, _, terminated, truncated, info = env.step(action_number)
+
+        after_coord = info["coord"]
+
+        if action in ["LEFT", "RIGHT", "UP", "DOWN"]:
+            agent.add_edge_to_graph(before_coord, after_coord, action)
+
+        done = terminated or truncated
+        step += 1
+
+        if step % 2000 == 0:
+            with open(f"graph_{step}.pkl", "wb") as f:
+                pickle.dump(agent, f)
+
+    env.close()
+
+
 def ppo():
     args = parse_args()
     envs = DummyVecEnv(
@@ -77,7 +110,7 @@ def ppo():
 
 
 def main():
-    ppo()
+    graph_explorer()
 
 
 if __name__ == "__main__":

@@ -25,6 +25,10 @@ ACTION_INT_TO_STR = {
     # 7: "START",
 }
 
+ACTION_STR_TO_INT = {
+    v: k for k, v in ACTION_INT_TO_STR.items()
+}
+
 MOVEMENT_ACTIONS = {"UP", "DOWN", "LEFT", "RIGHT"}
 
 MAX_MOVEMENT_ACTION_SENDS = 2
@@ -78,7 +82,7 @@ def base64_to_numpy(b64_string: str) -> np.ndarray:
     return np.array(image)
 
 
-@dataclass
+@dataclass(frozen=True)
 class Coordinate:
     x: int
     y: int
@@ -139,8 +143,11 @@ class PokeEnv(gym.Env):
         state = self._get_state()
         obs = self._get_obs(state)
         coordinate = self._get_coord(state)
-        info = {"coord": coordinate}
         self._last_seen_coord = coordinate
+
+        info = {}
+        info["coord"] = coordinate
+        info["total_reward"] = self._total_reward
 
         if self._pygame:
             self._update_pygame_window(obs["image"])
@@ -187,7 +194,6 @@ class PokeEnv(gym.Env):
 
         next_obs = self._get_obs(next_state)
         next_coordinate = self._get_coord(next_state)
-        info = {"coord": next_coordinate}
         self._last_seen_coord = next_coordinate
 
         location = next_coordinate.loc
@@ -195,11 +201,12 @@ class PokeEnv(gym.Env):
             reward += 1
             self._seen_locations.add(location)
 
-        if self._steps >= self.time_limit:
-            truncated = True
-        else:
-            truncated = False
+        truncated = self._steps >= self.time_limit
         terminated = False
+
+        info = {}
+        info["coord"] = next_coordinate
+        info["total_reward"] = self._total_reward
 
         if self._pygame:
             self._update_pygame_window(next_obs["image"])
