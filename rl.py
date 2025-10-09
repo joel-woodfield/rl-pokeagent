@@ -86,13 +86,13 @@ def graph_explorer():
 
         after_coord = info["coord"]
 
-        if action in ["LEFT", "RIGHT", "UP", "DOWN"]:
+        if info["game_state"] == "overworld" and action in ["LEFT", "RIGHT", "UP", "DOWN"]:
             agent.add_edge_to_graph(before_coord, after_coord, action)
 
         done = terminated or truncated
         step += 1
 
-        if step % 2000 == 0:
+        if step % 1000 == 0:
             with open(f"graph_{step}.pkl", "wb") as f:
                 pickle.dump(agent, f)
 

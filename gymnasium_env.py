@@ -148,6 +148,10 @@ class PokeEnv(gym.Env):
         info = {}
         info["coord"] = coordinate
         info["total_reward"] = self._total_reward
+        try:
+            info["game_state"] = state["game"]["game_state"]
+        except KeyError:
+            info["game_state"] = "unknown"
 
         if self._pygame:
             self._update_pygame_window(obs["image"])
@@ -207,6 +211,10 @@ class PokeEnv(gym.Env):
         info = {}
         info["coord"] = next_coordinate
         info["total_reward"] = self._total_reward
+        try:
+            info["game_state"] = next_state["game"]["game_state"]
+        except KeyError:
+            info["game_state"] = "unknown"
 
         if self._pygame:
             self._update_pygame_window(next_obs["image"])

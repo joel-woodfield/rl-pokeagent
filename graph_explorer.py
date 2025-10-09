@@ -118,6 +118,22 @@ class Graph:
         neighbors = self.get_neighbors(coordinate)
         return any(n is None for n in (neighbors.left, neighbors.right, neighbors.up, neighbors.down))
 
+    def make_frontier_unexplored(self) -> None:
+        for coord, neighbors in self._graph.items():
+            for direction in ["left", "right", "up", "down"]:
+                neighbor = getattr(neighbors, direction)
+                if neighbor == coord:
+                    setattr(neighbors, direction, None)
+
+    def make_frontier_unexplored_for_location(self, location: str) -> None:
+        for coord, neighbors in self._graph.items():
+            if coord.loc != location:
+                continue
+            for direction in ["left", "right", "up", "down"]:
+                neighbor = getattr(neighbors, direction)
+                if neighbor == coord:
+                    setattr(neighbors, direction, None)
+
 
 class GraphExplorer:
     def __init__(self):
@@ -154,6 +170,12 @@ class GraphExplorer:
 
         # Find closest node with unvisited directions
         trajectory = self._graph.bfs_condition(coord, lambda c: self._graph.unexplored(c))
+
+        # if all nodes are explored: make all fronteir nodes unexplored
+        if not trajectory:
+            # self._graph.make_frontier_unexplored()
+            self._graph.make_frontier_unexplored_for_location(coord.loc)
+
         directions = self._graph.trajectory_to_directions(trajectory)
 
         if directions:
@@ -169,3 +191,4 @@ class GraphExplorer:
             action = np.random.choice(USEFUL_ACTIONS)
 
         return action
+
