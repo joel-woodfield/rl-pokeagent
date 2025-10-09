@@ -3,11 +3,13 @@ import pickle
 import time
 
 import gymnasium as gym
+import numpy as np
 from sb3_contrib import RecurrentPPO
 from stable_baselines3.common.vec_env import DummyVecEnv
 
 from graph_explorer import GraphExplorer
 from gymnasium_env import ACTION_STR_TO_INT, PokeEnv
+from q import QAgent, QState
 
 
 def parse_args():
@@ -113,6 +115,59 @@ def graph_explorer():
     print(f"Total time: {time.time() - start_time} seconds")
 
 
+def q():
+    args = parse_args()
+    env = PokeEnv(args, seed=0)
+    agent = QAgent(
+        lr=0.1, gamma=0.99, num_actions=4, init_q=0.1
+    )
+
+    epsilon = 0.1
+    total_steps = 0
+
+    def get_game_state(info: dict) -> str:
+        try:
+            return info["game_state"]
+        except KeyError:
+            return "unknown"
+
+    while total_steps < 1_000_000:
+        done = False
+        _, info = env.reset()
+        state = QState(
+            coord=info["coord"],
+            milestones=info["total_reward"],
+            game_state=get_game_state(info),
+        )
+
+        while not done:
+            if np.random.rand() < 0.5:
+                action = np.random.randint(2)
+                _, reward, terminated, truncated, info = env.step(action)
+            else:
+                action = agent.get_action(state, epsilon)
+                _, reward, terminated, truncated, info = env.step(action + 2)
+
+            next_state = QState(
+                coord=info["coord"],
+                milestones=info["total_reward"],
+                game_state=get_game_state(info),
+            )
+            done = terminated or truncated
+
+            agent.update(state, action, reward, next_state, done=done)
+
+            state = next_state
+
+            total_steps += 1
+
+
+    with open("q_agent.pkl", "wb") as f:
+        pickle.dump(agent, f)
+    
+    env.close()
+
+
 def ppo():
     args = parse_args()
     envs = DummyVecEnv(
@@ -124,7 +179,7 @@ def ppo():
 
 
 def main():
-    graph_explorer()
+    q()
 
 
 if __name__ == "__main__":
