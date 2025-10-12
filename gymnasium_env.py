@@ -124,6 +124,15 @@ class PokeEnv(gym.Env):
         self._total_reward = 0
         self._last_seen_coord = None
 
+    def _in_dialog(self, obs: dict) -> bool:
+        ymin = 63
+        ymax = 79
+        xmin = 4
+        xmax = 79
+        dialog_area = obs["image"][ymin:ymax, xmin:xmax]
+
+        return np.sum(dialog_area == 255) / dialog_area.size > 0.5
+
     def reset(self, seed=None) -> tuple[dict, dict]:
         self._steps = 0
         self._total_reward = 0
@@ -148,10 +157,7 @@ class PokeEnv(gym.Env):
         info = {}
         info["coord"] = coordinate
         info["total_reward"] = self._total_reward
-        try:
-            info["game_state"] = state["game"]["game_state"]
-        except KeyError:
-            info["game_state"] = "unknown"
+        info["in_dialog"] = self._in_dialog(obs)
 
         if self._pygame:
             self._update_pygame_window(obs["image"])
@@ -211,10 +217,7 @@ class PokeEnv(gym.Env):
         info = {}
         info["coord"] = next_coordinate
         info["total_reward"] = self._total_reward
-        try:
-            info["game_state"] = next_state["game"]["game_state"]
-        except KeyError:
-            info["game_state"] = "unknown"
+        info["in_dialog"] = self._in_dialog(next_obs)
 
         if self._pygame:
             self._update_pygame_window(next_obs["image"])

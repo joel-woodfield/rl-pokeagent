@@ -93,12 +93,14 @@ def graph_explorer():
 
         action = agent.get_action(before_coord)
         action_number = ACTION_STR_TO_INT[action]
-        _, _, terminated, truncated, info = env.step(action_number)
+        obs, _, terminated, truncated, info = env.step(action_number)
 
         after_coord = info["coord"]
 
-        if info["game_state"] == "overworld" and action in ["LEFT", "RIGHT", "UP", "DOWN"]:
+        if not info["in_dialog"] and action in ["LEFT", "RIGHT", "UP", "DOWN"]:
             agent.add_edge_to_graph(before_coord, after_coord, action)
+        
+        print(f"In dialog: {info['in_dialog']}")
 
         done = terminated or truncated
         step += 1
@@ -179,7 +181,7 @@ def ppo():
 
 
 def main():
-    q()
+    graph_explorer()
 
 
 if __name__ == "__main__":
