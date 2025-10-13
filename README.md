@@ -37,7 +37,7 @@ No Human or automated feedback is used.
 No training was done, and no extra pokemon data was used.
 
 Additional information:
-* The video is 11 hours long but the action runtime was less than 6 hours. This is also reflected in submission.log.
+* The video is 11 hours long but the actual runtime was less than 6 hours. This is also reflected in submission.log.
   
 * The codebase includes code for RL approaches that was not used in this submission's run.
   
