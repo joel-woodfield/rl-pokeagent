@@ -1,3 +1,50 @@
+# Team lead pokeagent
+### (1) Overall approach
+It is a graph-based exploration/search algorithm. It explores by building and using a graph of the game's map, where each node is a coordinate and directed edges from one node to another indicates you can move between them with a specific movement action. After trying a movement action from a coordinate, it updates the graph based on which coordinate it ends up in after that action. The algorithm tries to move in all 4 directions at every coordinate. Random actions are also used to be able to talk to NPCs and interact with objects. A dialog box checker checks if the game is in dialog from the game image, and this is used to prevent using the graph while in dialog.
+
+The algorithm is as follows:
+* with probability 0.1: take a random action
+* with probability 0.9:
+	* if in dialog, take an action from [A, B]
+	* otherwise:
+		* with probability 0.5: take a random action from [A, B]
+		* with probability 0.5: take a graph exploration action
+
+The graph exploration action is determined as follows:
+1. If you haven't tried moving in one of the 4 directions from the current coordinate, move in that direction.
+2. Otherwise: 
+	2.1. Use BFS to find the path to the closest node where you haven't moved in one of the 4 directions from.
+	2.2. If a path exists, move one step along that path
+	2.3. Otherwise, remove all edges in the current location (e.g. LITTLEROOT TOWN) that lead to the same node, then go to line 2.1
+
+
+### (2) State information
+The state information used are:
+* the (x, y) coordinates
+* the location string (e.g. LITTLEROOT TOWN)
+* the game image (for checking if the game is in dialog only)
+
+### (3) Tools
+The BFS algorithm is used.
+
+### (4) Memory
+A graph of the game's map is constructed from scratch and used during the run.
+
+### (5) Feedback
+No Human or automated feedback is used.
+
+### (6) Fine-tuning
+No training was done, and no extra pokemon data was used.
+
+Additional information:
+* The video is 11 hours long but the action runtime was less than 6 hours. This is also reflected in submission.log.
+  
+* The codebase includes code for RL approaches that was not used in this submission's run.
+  
+* The run was generated using the script rl.py rather than run.py. The interaction with the server is done in gymansium_env.py. This was to make it more convenient for our attempts using RL. Our code still uses app.py for the server but does not make use of the function run_multiprocess_client in client.py. The code app-dev.py was not used for this run.
+
+
+
 # PokéAgent Challenge: RPG Speedrunning Agent in Pokémon Emerald
 
 ![PokéAgent Challenge: RPG Speedrunning Agent in Pokémon Emerald](emerald.png)
