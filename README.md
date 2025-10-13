@@ -13,9 +13,12 @@ The algorithm is as follows:
 The graph exploration action is determined as follows:
 1. If you haven't tried moving in one of the 4 directions from the current coordinate, move in that direction.
 2. Otherwise: 
+	
 	2.1. Use BFS to find the path to the closest node where you haven't moved in one of the 4 directions from.
-	2.2. If a path exists, move one step along that path
-	2.3. Otherwise, remove all edges in the current location (e.g. LITTLEROOT TOWN) that lead to the same node, then go to line 2.1
+	
+	2.2. If a path exists, move one step along that path.
+	
+	2.3. Otherwise, remove all edges in the current location (e.g. LITTLEROOT TOWN) that lead to the same node. Then take a random movement action.
 
 
 ### (2) State information
