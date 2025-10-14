@@ -110,13 +110,12 @@ def format_tile_to_symbol(tile):
         return "#"
 
 
-def format_map_grid(raw_tiles, player_facing="South", npcs=None, player_coords=None, trim_padding=True):
+def format_map_grid(raw_tiles, npcs=None, player_coords=None, trim_padding=True):
     """
     Format raw tile data into a traversability grid with NPCs.
     
     Args:
         raw_tiles: 2D list of tile tuples
-        player_facing: Player facing direction for center marker
         npcs: List of NPC/object events with positions
         trim_padding: If True, remove padding rows/columns that are all walls
         
@@ -248,13 +247,12 @@ def format_map_grid(raw_tiles, player_facing="South", npcs=None, player_coords=N
     return grid
 
 
-def format_map_for_display(raw_tiles, player_facing="South", title="Map", npcs=None, player_coords=None):
+def format_map_for_display(raw_tiles, title="Map", npcs=None, player_coords=None):
     """
     Format raw tiles into a complete display string with headers and legend.
     
     Args:
         raw_tiles: 2D list of tile tuples
-        player_facing: Player facing direction
         title: Title for the map display
         npcs: List of NPC/object events with positions
         player_coords: Dict with player absolute coordinates {'x': x, 'y': y}
@@ -271,7 +269,7 @@ def format_map_for_display(raw_tiles, player_facing="South", title="Map", npcs=N
     else:
         player_coords_tuple = player_coords
     
-    grid = format_map_grid(raw_tiles, player_facing, npcs, player_coords_tuple)
+    grid = format_map_grid(raw_tiles, npcs, player_coords_tuple)
     
     lines = [f"{title} ({len(grid)}x{len(grid[0])}):", ""]
     
@@ -389,13 +387,12 @@ def generate_dynamic_legend(grid):
     return "\n".join(legend_lines)
 
 
-def format_map_for_llm(raw_tiles, player_facing="South", npcs=None, player_coords=None):
+def format_map_for_llm(raw_tiles, npcs=None, player_coords=None):
     """
     Format raw tiles into LLM-friendly grid format (no headers/legends).
     
     Args:
         raw_tiles: 2D list of tile tuples  
-        player_facing: Player facing direction
         npcs: List of NPC/object events with positions
         player_coords: Tuple of (player_x, player_y) in absolute world coordinates
         
@@ -405,7 +402,7 @@ def format_map_for_llm(raw_tiles, player_facing="South", npcs=None, player_coord
     if not raw_tiles:
         return "No map data available"
     
-    grid = format_map_grid(raw_tiles, player_facing, npcs, player_coords)
+    grid = format_map_grid(raw_tiles, npcs, player_coords)
     
     # Simple grid format for LLM
     lines = []

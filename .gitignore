@@ -186,3 +186,4 @@ cython_debug/
 
 *.mp4
 .pokeagent_cache/*
+milestones_progress.json

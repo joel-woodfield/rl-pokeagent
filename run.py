@@ -104,8 +104,6 @@ def main():
                        help="VLM backend (openai, gemini, local, openrouter)")
     parser.add_argument("--model-name", type=str, default="gemini-2.5-flash", 
                        help="Model name to use")
-    parser.add_argument("--simple", action="store_true", 
-                       help="Simple mode: direct frame->action without 4-module architecture")
     
     # Operation modes
     parser.add_argument("--headless", action="store_true", 
@@ -154,10 +152,6 @@ def main():
         print("\n🤖 Agent Configuration:")
         print(f"   Backend: {args.backend}")
         print(f"   Model: {args.model_name}")
-        if args.simple:
-            print("   Mode: Simple (direct frame->action)")
-        else:
-            print("   Mode: Four-module architecture")
         if args.no_ocr:
             print("   OCR: Disabled")
         if args.record:

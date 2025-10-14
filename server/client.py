@@ -10,6 +10,7 @@ import base64
 import io
 import requests
 from PIL import Image
+from utils.state_formatter import format_state_for_llm
 
 # Display-related imports (conditionally used)
 try:
@@ -95,7 +96,8 @@ def run_multiprocess_client(server_port=8000, args=None):
     
     # Initialize pygame if not headless
     if not headless and PYGAME_AVAILABLE:
-        pygame.init()
+        pygame.display.init()
+        pygame.font.init()
         screen = pygame.display.set_mode((480, 320))
         pygame.display.set_caption("Pokemon Emerald")
         font = pygame.font.Font(None, 24)
@@ -125,7 +127,6 @@ def run_multiprocess_client(server_port=8000, args=None):
                         print("=" * 80)
                         print("📊 COMPREHENSIVE STATE (LLM View)")
                         print("=" * 80)
-                        from utils.state_formatter import format_state_for_llm
                         formatted_state = format_state_for_llm(state_data)
                         print(formatted_state)
                         print("=" * 80)
@@ -424,6 +425,7 @@ def run_multiprocess_client(server_port=8000, args=None):
     
     # Cleanup
     if not headless and PYGAME_AVAILABLE:
-        pygame.quit()
+        pygame.display.quit()
+        pygame.font.quit()
     
     return True
