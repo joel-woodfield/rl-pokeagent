@@ -8,6 +8,48 @@ Single source of truth for all map formatting across the codebase.
 from pokemon_env.enums import MetatileBehavior
 
 
+def get_symbol_legend():
+    """
+    Get the complete symbol legend for map displays.
+    
+    Returns:
+        dict: Symbol -> description mapping
+    """
+    return {
+        "P": "Player",
+        ".": "Walkable path",
+        "#": "Wall/Blocked/Unknown",
+        "D": "Door",
+        "S": "Stairs",
+        "@": "Warp/Exit",
+        "W": "Water",
+        "~": "Tall grass",
+        "PC": "PC/Computer",
+        "T": "Television",
+        "B": "Bookshelf", 
+        "?": "Unexplored area",
+        "F": "Flowers/Plants",
+        "C": "Counter/Desk",
+        "=": "Bed",
+        "t": "Table/Chair",
+        "O": "Clock",
+        "^": "Picture/Painting",
+        "U": "Trash can",
+        "V": "Pot/Vase",
+        "M": "Machine/Device",
+        "J": "Jump ledge",
+        "↓": "Jump South",
+        "↑": "Jump North",
+        "←": "Jump West",
+        "→": "Jump East",
+        "↗": "Jump Northeast",
+        "↖": "Jump Northwest", 
+        "↘": "Jump Southeast",
+        "↙": "Jump Southwest",
+        "N": "NPC",
+        "*": "Trainer"
+    }
+
 def format_tile_to_symbol(tile):
     """
     Convert a single tile to its display symbol.
@@ -48,8 +90,10 @@ def format_tile_to_symbol(tile):
         return "." if collision == 0 else "#"
     elif "DOOR" in behavior_name:
         return "D"
-    elif "STAIRS" in behavior_name or "WARP" in behavior_name:
+    elif "STAIRS" in behavior_name:
         return "S"
+    elif "WARP" in behavior_name:
+        return "@"
     elif "WATER" in behavior_name:
         return "W"
     elif "TALL_GRASS" in behavior_name:
@@ -192,7 +236,7 @@ def format_map_grid(raw_tiles, npcs=None, player_coords=None, trim_padding=True)
                 npc = npc_positions[(y, x)]
                 # Use different symbols for different NPC types
                 if npc.get('trainer_type', 0) > 0:
-                    grid_row.append("@")  # Trainer
+                    grid_row.append("*")  # Trainer
                 else:
                     grid_row.append("N")  # Regular NPC
             else:
@@ -247,94 +291,7 @@ def format_map_grid(raw_tiles, npcs=None, player_coords=None, trim_padding=True)
     return grid
 
 
-def format_map_for_display(raw_tiles, title="Map", npcs=None, player_coords=None):
-    """
-    Format raw tiles into a complete display string with headers and legend.
-    
-    Args:
-        raw_tiles: 2D list of tile tuples
-        title: Title for the map display
-        npcs: List of NPC/object events with positions
-        player_coords: Dict with player absolute coordinates {'x': x, 'y': y}
-        
-    Returns:
-        str: Formatted map display
-    """
-    if not raw_tiles:
-        return f"{title}: No map data available"
-    
-    # Convert player_coords to tuple if it's a dict
-    if player_coords and isinstance(player_coords, dict):
-        player_coords_tuple = (player_coords['x'], player_coords['y'])
-    else:
-        player_coords_tuple = player_coords
-    
-    grid = format_map_grid(raw_tiles, npcs, player_coords_tuple)
-    
-    lines = [f"{title} ({len(grid)}x{len(grid[0])}):", ""]
-    
-    # Add column headers
-    header = "      "
-    for i in range(len(grid[0])):
-        header += f"{i:2} "
-    lines.append(header)
-    lines.append("     " + "--" * len(grid[0]))
-    
-    # Add grid with row numbers
-    for y, row in enumerate(grid):
-        row_str = f"  {y:2}: " + " ".join(f"{cell:2}" for cell in row)
-        lines.append(row_str)
-    
-    # Add dynamic legend based on symbols that appear
-    lines.append("")
-    lines.append(generate_dynamic_legend(grid))
-    
-    return "\n".join(lines)
-
-
-def get_symbol_legend():
-    """
-    Get the complete symbol legend for map displays.
-    
-    Returns:
-        dict: Symbol -> description mapping
-    """
-    return {
-        "P": "Player",
-        ".": "Walkable path",
-        "#": "Wall/Blocked/Unknown",
-        "D": "Door",
-        "S": "Stairs/Warp",
-        "W": "Water",
-        "~": "Tall grass",
-        "PC": "PC/Computer",
-        "T": "Television",
-        "B": "Bookshelf", 
-        "?": "Unexplored area",
-        "F": "Flowers/Plants",
-        "C": "Counter/Desk",
-        "=": "Bed",
-        "t": "Table/Chair",
-        "O": "Clock",
-        "^": "Picture/Painting",
-        "U": "Trash can",
-        "V": "Pot/Vase",
-        "M": "Machine/Device",
-        "J": "Jump ledge",
-        "↓": "Jump South",
-        "↑": "Jump North",
-        "←": "Jump West",
-        "→": "Jump East",
-        "↗": "Jump Northeast",
-        "↖": "Jump Northwest", 
-        "↘": "Jump Southeast",
-        "↙": "Jump Southwest",
-        "N": "NPC",
-        "@": "Trainer"
-    }
-
-
-def generate_dynamic_legend(grid):
+def generate_legend_items(grid):
     """
     Generate a legend based on symbols that actually appear in the grid.
     
@@ -342,71 +299,20 @@ def generate_dynamic_legend(grid):
         grid: 2D list of symbol strings
         
     Returns:
-        str: Formatted legend string
+        list(str): List of formatted legend items
     """
     if not grid:
         return ""
     
     symbol_legend = get_symbol_legend()
     symbols_used = set()
+    legend_items = []
     
     # Collect all unique symbols in the grid
     for row in grid:
         for symbol in row:
-            symbols_used.add(symbol)
+            if symbol not in symbols_used:
+                symbols_used.add(symbol)
+                legend_items.append(f"""<item symbol="{symbol}" description="{symbol_legend[symbol]}" />""")
     
-    # Build legend for used symbols
-    legend_lines = ["Legend:"]
-    
-    # Group symbols by category for better organization
-    player_symbols = ["P"]
-    terrain_symbols = [".", "#", "W", "~", "?"] 
-    structure_symbols = ["D", "S"]
-    jump_symbols = ["J", "↓", "↑", "←", "→", "↗", "↖", "↘", "↙"]
-    furniture_symbols = ["PC", "T", "B", "F", "C", "=", "t", "O", "^", "U", "V", "M"]
-    npc_symbols = ["N", "@"]
-    
-    categories = [
-        ("Movement", player_symbols),
-        ("Terrain", terrain_symbols),
-        ("Structures", structure_symbols), 
-        ("Jump ledges", jump_symbols),
-        ("Furniture", furniture_symbols),
-        ("NPCs", npc_symbols)
-    ]
-    
-    for category_name, symbol_list in categories:
-        category_items = []
-        for symbol in symbol_list:
-            if symbol in symbols_used and symbol in symbol_legend:
-                category_items.append(f"{symbol}={symbol_legend[symbol]}")
-        
-        if category_items:
-            legend_lines.append(f"  {category_name}: {', '.join(category_items)}")
-    
-    return "\n".join(legend_lines)
-
-
-def format_map_for_llm(raw_tiles, npcs=None, player_coords=None):
-    """
-    Format raw tiles into LLM-friendly grid format (no headers/legends).
-    
-    Args:
-        raw_tiles: 2D list of tile tuples  
-        npcs: List of NPC/object events with positions
-        player_coords: Tuple of (player_x, player_y) in absolute world coordinates
-        
-    Returns:
-        str: Grid format suitable for LLM
-    """
-    if not raw_tiles:
-        return "No map data available"
-    
-    grid = format_map_grid(raw_tiles, npcs, player_coords)
-    
-    # Simple grid format for LLM
-    lines = []
-    for row in grid:
-        lines.append(" ".join(row))
-    
-    return "\n".join(lines)
+    return legend_items
