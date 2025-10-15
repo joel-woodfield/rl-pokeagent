@@ -14,6 +14,7 @@ import numpy as np
 from PIL import Image
 
 
+
 ACTION_INT_TO_STR = {
     0: "A",
     1: "B",
@@ -134,6 +135,7 @@ class PokeEnv(gym.Env):
         return np.sum(dialog_area == 255) / dialog_area.size > 0.5
 
     def reset(self, seed=None) -> tuple[dict, dict]:
+        from utils.map_formatter import format_map_grid
         self._steps = 0
         self._total_reward = 0
         self._seen_locations.clear()
@@ -158,6 +160,10 @@ class PokeEnv(gym.Env):
         info["coord"] = coordinate
         info["total_reward"] = self._total_reward
         info["in_dialog"] = self._in_dialog(obs)
+        try:
+            info["map"] = format_map_grid(state["map"]["tiles"])
+        except KeyError:
+            info["map"] = []
 
         if self._pygame:
             self._update_pygame_window(obs["image"])
@@ -167,6 +173,7 @@ class PokeEnv(gym.Env):
         return obs, info
 
     def step(self, action: int) -> tuple[dict, float, bool, bool, dict]:
+        from utils.map_formatter import format_map_grid
         action = ACTION_INT_TO_STR.get(action, None)
         if action is None:
             raise ValueError(f"Invalid action: {action}")
@@ -218,6 +225,10 @@ class PokeEnv(gym.Env):
         info["coord"] = next_coordinate
         info["total_reward"] = self._total_reward
         info["in_dialog"] = self._in_dialog(next_obs)
+        try:
+            info["map"] = format_map_grid(next_state["map"]["tiles"])
+        except KeyError:
+            info["map"] = []
 
         if self._pygame:
             self._update_pygame_window(next_obs["image"])

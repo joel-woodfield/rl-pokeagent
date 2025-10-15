@@ -1,5 +1,4 @@
 import textwrap
-from utils.map_formatter import format_map_grid, generate_legend_items
 
 #------------------------------------------------------------------------------
 # STATE FORMATTERS
@@ -19,6 +18,8 @@ def format_state_for_llm(game_state):
     
 
 def _format_state_for_llm_overworld(game_state):
+    # Import inside function to avoid circular import
+    from utils.map_formatter import format_map_grid, generate_legend_items
     
     # Extract data
     player_data = game_state.get("player", {})
@@ -37,6 +38,7 @@ def _format_state_for_llm_overworld(game_state):
     raw_tiles = map_data.get('tiles', [])
     npcs = []
     player_coords = map_data.get('player_coords')
+    
     map_grid = format_map_grid(raw_tiles, npcs, player_coords)
     map_rows = [" ".join(row) for row in map_grid]
     map_height = len(map_rows)

@@ -24,19 +24,29 @@ class Graph:
     def add_node(self, coord: Coordinate) -> None:
         self._graph[coord] = CoordNeighbors()
 
-    def add_edge(self, from_coord: Coordinate, to_coord: Coordinate, direction: str) -> None:
+    def add_edge(
+        self, 
+        from_coord: Coordinate, 
+        to_coord: Coordinate, 
+        direction: str,
+        replace: bool = True,
+    ) -> None:
         if from_coord not in self._graph or to_coord not in self._graph:
             raise ValueError("Both coordinates must be added to the graph before adding an edge.")
 
         from_coord_neighbors = self._graph[from_coord]
         if direction == "LEFT":
-            from_coord_neighbors.left = to_coord
+            if replace or from_coord_neighbors.left is None:
+                from_coord_neighbors.left = to_coord
         elif direction == "RIGHT":
-            from_coord_neighbors.right = to_coord
+            if replace or from_coord_neighbors.right is None:
+                from_coord_neighbors.right = to_coord
         elif direction == "UP":
-            from_coord_neighbors.up = to_coord
+            if replace or from_coord_neighbors.up is None:
+                from_coord_neighbors.up = to_coord
         elif direction == "DOWN":
-            from_coord_neighbors.down = to_coord
+            if replace or from_coord_neighbors.down is None:
+                from_coord_neighbors.down = to_coord
         else:
             raise ValueError(f"Invalid direction: {direction}")
 
@@ -144,14 +154,18 @@ class GraphExplorer:
             self._graph.add_node(coord)
 
     def add_edge_to_graph(
-        self, coord1: Coordinate, coord2: Coordinate, direction: str
+        self, 
+        coord1: Coordinate, 
+        coord2: Coordinate, 
+        direction: str, 
+        replace: bool = True,
     ) -> None:
         if not self._graph.has_node(coord1):
             self._graph.add_node(coord1)
         if not self._graph.has_node(coord2):
             self._graph.add_node(coord2)
 
-        self._graph.add_edge(coord1, coord2, direction)
+        self._graph.add_edge(coord1, coord2, direction, replace=replace)
 
     def get_explore_direction(self, coord: Coordinate) -> int:
         if not self._graph.has_node(coord):
@@ -192,3 +206,58 @@ class GraphExplorer:
 
         return action
 
+    def fill_graph_walkable(self, map: list, player_coord: Coordinate) -> None:
+        map = np.array(map)
+
+        shift_x = np.inf
+        shift_y = np.inf
+        for y, line in enumerate(map):
+            for x, char in enumerate(line):
+                if char == "P":
+                    shift_x = player_coord.x - x
+                    shift_y = player_coord.y - y
+                    break
+
+        if shift_x == np.inf or shift_y == np.inf:
+            print("Player not found in map.")
+            return
+        
+        walkable = [".", "~"]
+        for y in range(map.shape[0]):
+            for x in range(map.shape[1]):
+                if map[y, x] == ".":
+                    coord = Coordinate(x=x + shift_x, y=y + shift_y, loc=player_coord.loc)
+                    self.add_coord_to_graph(coord)
+                    if x - 1 >= 0:
+                        if map[y, x - 1] in walkable:
+                            neighbor = Coordinate(x=x - 1 + shift_x, y=y + shift_y, loc=player_coord.loc)
+                        elif map[y, x - 1] == "#":
+                            neighbor = coord
+                        else:
+                            continue
+                        self.add_edge_to_graph(coord, neighbor, "LEFT", replace=False)
+                    if x + 1 < map.shape[1]:
+                        if map[y, x + 1] in walkable:
+                            neighbor = Coordinate(x=x + 1 + shift_x, y=y + shift_y, loc=player_coord.loc)
+                        elif map[y, x + 1] == "#":
+                            neighbor = coord
+                        else:
+                            continue
+                        self.add_edge_to_graph(coord, neighbor, "RIGHT", replace=False)
+                    if y - 1 >= 0:
+                        if map[y - 1, x] in walkable:
+                            neighbor = Coordinate(x=x + shift_x, y=y - 1 + shift_y, loc=player_coord.loc)
+                        elif map[y - 1, x] == "#":
+                            neighbor = coord
+                        else:
+                            continue
+                        self.add_edge_to_graph(coord, neighbor, "UP", replace=False)
+                    if y + 1 < map.shape[0]:
+                        if map[y + 1, x] in walkable:
+                            neighbor = Coordinate(x=x + shift_x, y=y + 1 + shift_y, loc=player_coord.loc)
+                        elif map[y + 1, x] == "#":
+                            neighbor = coord
+                        else:
+                            continue
+                        self.add_edge_to_graph(coord, neighbor, "DOWN", replace=False)
+                    

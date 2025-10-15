@@ -126,6 +126,59 @@ def graph_explorer():
     print(f"Total time: {time.time() - start_time} seconds")
 
 
+def graph_explorer2():
+    args = parse_args()
+    env = PokeEnv(args, seed=0)
+    agent = GraphExplorer()
+
+    done = False
+    _, info = env.reset()
+    step = 0
+
+    start_time = time.time()
+
+    while not done:
+        before_coord = info["coord"]
+        agent.add_coord_to_graph(before_coord)
+
+        if info["map"]:
+            agent.fill_graph_walkable(info["map"], before_coord)
+
+        if np.random.rand() < 0.1:
+            action = np.random.choice(list(ACTION_STR_TO_INT.keys()))
+        else:
+            if info["in_dialog"]:
+                action = np.random.choice(["A", "B"])
+            else:
+                action = agent.get_action(before_coord)
+
+        update_graph = not info["in_dialog"] and action in ["LEFT", "RIGHT", "UP", "DOWN"]
+
+        action_number = ACTION_STR_TO_INT[action]
+        obs, _, terminated, truncated, info = env.step(action_number)
+
+        after_coord = info["coord"]
+
+        if update_graph:
+            agent.add_edge_to_graph(before_coord, after_coord, action)
+        
+        print(f"In dialog: {info['in_dialog']}")
+
+        done = terminated or truncated
+        step += 1
+
+        if step % 1000 == 0:
+            with open(f"graph_{step}.pkl", "wb") as f:
+                pickle.dump(agent, f)
+
+        if time.time() - start_time > args.human_timelimit:
+            print("Time limit reached, ending episode.")
+            break
+
+    env.close()
+    print(f"Total time: {time.time() - start_time} seconds")
+
+
 def q():
     args = parse_args()
     env = PokeEnv(args, seed=0)
@@ -190,7 +243,7 @@ def ppo():
 
 
 def main():
-    graph_explorer()
+    graph_explorer2()
 
 
 if __name__ == "__main__":
